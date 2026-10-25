@@ -395,6 +395,9 @@ namespace reshade
 		void deinit_gui_vr();
 		void build_font_atlas();
 		bool init_logo_texture();
+		void draw_gui_configs();
+		void save_session_state();
+		void load_session_state();
 
 		void load_config_gui(const class ini_file &config);
 		void save_config_gui(class ini_file &config) const;
@@ -487,6 +490,11 @@ namespace reshade
 		std::filesystem::path _editor_font_path, _default_editor_font_path;
 		std::filesystem::path _file_selection_path;
 		float _fps_col[4] = { 1.0f, 1.0f, 0.784314f, 1.0f };
+		int _overlay_section = 0;
+		bool _session_state_restore_pending = true;
+		std::vector<std::string> _collapsed_effects;
+		char _preset_selection_name[260] = "";
+		ImFont *_font_semibold = nullptr;
 		float _fps_scale = 1.0f;
 		float _hdr_overlay_brightness = 203.f; // HDR reference white as per BT.2408
 		api::color_space _hdr_overlay_overwrite_color_space = api::color_space::unknown;

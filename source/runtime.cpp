@@ -633,6 +633,8 @@ void reshade::runtime::on_reset()
 	else
 		return; // Nothing to do if the runtime was already destroyed or not successfully initialized in the first place
 
+	save_session_state(); // OpenChanger: remember the live state for the next session
+
 	// Already performs a wait for idle, so no need to do it again before destroying resources below
 	destroy_effects();
 
@@ -1336,6 +1338,43 @@ void reshade::runtime::load_current_preset()
 	// Reverse queue so that effects are enabled in the order they are defined in the preset (since the queue is worked from back to front)
 	std::reverse(_reload_create_queue.begin(), _reload_create_queue.end());
 }
+void reshade::runtime::save_session_state()
+{
+	// OpenChanger: remember the live state (technique toggles and values) independent of
+	// the selected preset, so the next session starts where this one left off
+	if (_is_in_preset_transition || _reload_remaining_effects != 0 || _effects.empty())
+		return;
+
+	std::error_code ec;
+	const std::filesystem::path preset_dir = g_reshade_base_path / L"openchanger_presets";
+	std::filesystem::create_directories(preset_dir, ec);
+
+	const std::filesystem::path session_path = preset_dir / L".session.ini";
+
+	ini_file &preset = ini_file::load_cache(session_path);
+	preset.clear();
+	save_current_preset(preset);
+	ini_file::flush_cache(session_path);
+}
+
+void reshade::runtime::load_session_state()
+{
+	const std::filesystem::path session_path = g_reshade_base_path / L"openchanger_presets" / L".session.ini";
+
+	std::error_code ec;
+	if (!std::filesystem::exists(session_path, ec))
+		return;
+
+	// Reuse the preset loading machinery with the session file standing in for the
+	// current preset, then restore the real preset path
+	const std::filesystem::path backup_path = _current_preset_path;
+	_current_preset_path = session_path;
+	load_current_preset();
+	_current_preset_path = backup_path;
+
+	_preset_is_modified = true; // Session state is not necessarily what the preset file contains
+}
+
 void reshade::runtime::save_current_preset(ini_file &preset) const
 {
 	assert(!_is_in_preset_transition);
@@ -3733,6 +3772,13 @@ void reshade::runtime::update_effects()
 		// Finished loading effects, so apply preset to figure out which ones need compiling
 		load_current_preset();
 
+		// OpenChanger: restore the last session state once effects are ready for the first time
+		if (_session_state_restore_pending)
+		{
+			_session_state_restore_pending = false;
+			load_session_state();
+		}
+
 #if RESHADE_ADDON
 		invoke_addon_event<addon_event::reshade_set_current_preset_path>(this, _current_preset_path.u8string().c_str());
 #endif
@@ -5279,3 +5325,4 @@ bool reshade::runtime::get_texture_data(api::resource resource, api::resource_us
 
 	return mapped_data.data != nullptr;
 }
+

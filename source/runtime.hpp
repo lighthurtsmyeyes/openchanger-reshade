@@ -325,6 +325,9 @@ namespace reshade
 		api::resource _empty_tex = {};
 		api::resource_view _empty_srv = {};
 
+		api::resource _logo_texture = {};
+		api::resource_view _logo_srv = {};
+
 		std::unordered_map<size_t, api::sampler> _effect_sampler_states;
 		std::unordered_map<std::string, std::pair<api::resource_view, api::resource_view>> _texture_semantic_bindings;
 #if RESHADE_ADDON == 1
@@ -391,6 +394,7 @@ namespace reshade
 		void deinit_gui();
 		void deinit_gui_vr();
 		void build_font_atlas();
+		bool init_logo_texture();
 
 		void load_config_gui(const class ini_file &config);
 		void save_config_gui(class ini_file &config) const;

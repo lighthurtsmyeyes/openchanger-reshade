@@ -42,7 +42,7 @@ bool reshade::runtime::init_gui_vr()
 		return true; // Do not prevent effect runtime from initializing
 	}
 
-	const vr::EVROverlayError overlay_e = vr::VROverlay()->CreateDashboardOverlay("reshade", "ReShade " VERSION_STRING_PRODUCT, &s_vr_overlay_handle, &s_vr_thumbnail_handle);
+	const vr::EVROverlayError overlay_e = vr::VROverlay()->CreateDashboardOverlay("reshade", "OpenChanger ReShade " VERSION_STRING_PRODUCT, &s_vr_overlay_handle, &s_vr_thumbnail_handle);
 	if (overlay_e != vr::VROverlayError_None)
 	{
 		log::message(log::level::error, "Failed to create VR dashboard overlay with error code %d!", static_cast<int>(overlay_e));

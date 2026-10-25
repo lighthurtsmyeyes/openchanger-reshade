@@ -16,6 +16,7 @@
 #include "imgui_widgets.hpp"
 #include "localization.hpp"
 #include "platform_utils.hpp"
+#include <stb_image.h> // stbi_load_from_memory
 #include "fonts/forkawesome.inl"
 #include <cmath> // std::abs, std::ceil, std::floor
 #include <cctype> // std::tolower
@@ -293,7 +294,37 @@ void reshade::runtime::build_font_atlas()
 
 	ImGui::SetCurrentContext(backup_context);
 
-	_rebuild_font_atlas = false;
+		_rebuild_font_atlas = false;
+}
+
+bool reshade::runtime::init_logo_texture()
+{
+	if (_logo_texture != 0)
+		return _logo_srv != 0;
+	if (_device == nullptr)
+		return false;
+
+	// OpenChanger: decode the embedded logo (IDB_MAIN_ICON) into an overlay texture
+	const resources::data_resource logo = resources::load_data_resource(IDB_MAIN_ICON);
+	int width = 0, height = 0, channels = 0;
+	stbi_uc *const logo_data = stbi_load_from_memory(static_cast<const stbi_uc *>(logo.data), static_cast<int>(logo.data_size), &width, &height, &channels, STBI_rgb_alpha);
+	if (logo_data == nullptr)
+		return false;
+
+	api::subresource_data initial_data = {};
+	initial_data.data = logo_data;
+	initial_data.row_pitch = static_cast<uint32_t>(width) * 4; // One row of RGBA8 pixels
+
+	// Initial data is copied during resource creation, so the buffer can be released right after
+	const bool success = _device->create_resource(
+		api::resource_desc(width, height, 1, 1, api::format::r8g8b8a8_unorm, 1, api::memory_heap::default_, api::resource_usage::shader_resource),
+		&initial_data, api::resource_usage::shader_resource, &_logo_texture);
+	stbi_image_free(logo_data);
+
+	if (success)
+		_device->create_resource_view(_logo_texture, api::resource_usage::shader_resource, api::resource_view_desc(api::format::r8g8b8a8_unorm), &_logo_srv);
+
+	return success && _logo_srv != 0;
 }
 
 void reshade::runtime::load_config_gui(const ini_file &config)
@@ -1098,8 +1129,8 @@ void reshade::runtime::draw_gui()
 		ImGui::SetNextWindowPos(_imgui_context->Style.WindowPadding);
 		ImGui::SetNextWindowSize(ImVec2(imgui_io.DisplaySize.x - 20.0f, 0.0f));
 		ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 1.0f);
-		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.862745f, 0.862745f, 0.862745f, 1.0f));
-		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.117647f, 0.117647f, 0.117647f, show_spinner ? 0.0f : 0.7f));
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.95f, 0.97f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.03f, 0.03f, 0.03f, show_spinner ? 0.0f : 0.85f));
 		ImGui::Begin("Splash Window", nullptr,
 			ImGuiWindowFlags_NoDecoration |
 			ImGuiWindowFlags_NoNav |
@@ -1115,7 +1146,14 @@ void reshade::runtime::draw_gui()
 		}
 		else
 		{
-			ImGui::TextUnformatted("ReShade " VERSION_STRING_PRODUCT);
+			if (init_logo_texture())
+			{
+				ImGui::Image(_logo_srv.handle, ImVec2(ImGui::GetFontSize() * 2.0f, ImGui::GetFontSize() * 2.0f));
+				ImGui::SameLine(0, ImGui::GetStyle().ItemSpacing.x);
+				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + ImGui::GetFontSize() * 0.4f);
+			}
+
+			ImGui::TextUnformatted("OpenChanger ReShade " VERSION_STRING_PRODUCT);
 
 			if ((s_latest_version[0] > VERSION_MAJOR) ||
 				(s_latest_version[0] == VERSION_MAJOR && s_latest_version[1] > VERSION_MINOR) ||
@@ -3181,7 +3219,14 @@ void reshade::runtime::draw_gui_log()
 }
 void reshade::runtime::draw_gui_about()
 {
-	ImGui::TextUnformatted("ReShade " VERSION_STRING_PRODUCT);
+	if (init_logo_texture())
+	{
+		ImGui::Image(_logo_srv.handle, ImVec2(ImGui::GetFontSize() * 2.5f, ImGui::GetFontSize() * 2.5f));
+		ImGui::SameLine(0, ImGui::GetStyle().ItemSpacing.x);
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + ImGui::GetFontSize() * 0.6f);
+	}
+
+	ImGui::TextUnformatted("OpenChanger ReShade " VERSION_STRING_PRODUCT);
 
 	ImGui::SameLine(ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize("https://reshade.me").x, ImGui::GetStyle().ItemSpacing.x);
 	ImGui::TextLinkOpenURL("https://reshade.me");
@@ -3190,7 +3235,7 @@ void reshade::runtime::draw_gui_about()
 
 	ImGui::PushTextWrapPos();
 
-	ImGui::TextUnformatted(_("Developed and maintained by crosire."));
+	ImGui::TextUnformatted(_("Based on ReShade, developed and maintained by crosire."));
 	ImGui::TextUnformatted(_("This project makes use of several open source libraries, licenses of which are listed below:"));
 
 	if (ImGui::CollapsingHeader("ReShade", ImGuiTreeNodeFlags_DefaultOpen))

@@ -180,7 +180,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID)
 			}
 
 			reshade::log::message(reshade::log::level::info,
-				"Initializing crosire's ReShade version '" VERSION_STRING_FILE "' "
+				"Initializing OpenChanger ReShade version '" VERSION_STRING_FILE "' "
 #ifndef _WIN64
 				"(32-bit) "
 #else

@@ -641,6 +641,17 @@ void reshade::runtime::on_reset()
 	_device->destroy_resource_view(_empty_srv);
 	_empty_srv = {};
 
+	if (_logo_texture != 0)
+	{
+		_device->destroy_resource(_logo_texture);
+		_logo_texture = {};
+	}
+	if (_logo_srv != 0)
+	{
+		_device->destroy_resource_view(_logo_srv);
+		_logo_srv = {};
+	}
+
 	for (const effect_permutation &permutation : _effect_permutations)
 	{
 		_device->destroy_resource(permutation.color_tex);

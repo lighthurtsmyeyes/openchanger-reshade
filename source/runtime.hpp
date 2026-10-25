@@ -474,7 +474,7 @@ namespace reshade
 
 		#pragma region Overlay Settings
 		std::string _selected_language, _current_language;
-		float _font_size = 13.0f;
+		float _font_size = 16.0f;
 		float _editor_font_size = 13.0f;
 		int _style_index = 2;
 		int _editor_style_index = 0;

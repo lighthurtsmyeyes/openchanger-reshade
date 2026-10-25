@@ -659,30 +659,6 @@ namespace ReShade.Setup
 
 			// Check whether the API is specified in the compatibility list, in which case setup can continue right away
 			string executableName = Path.GetFileName(currentInfo.targetPath);
-			if (compatibilityIni?.GetString(executableName, "Banned") == "1")
-			{
-				// Automatically uninstall ReShade from banned applications
-				foreach (string conflictingModuleName in new[] { "d3d9.dll", "d3d10.dll", "d3d11.dll", "d3d12.dll", "dxgi.dll", "opengl32.dll" })
-				{
-					string conflictingModulePath = Path.Combine(basePath, conflictingModuleName);
-
-					try
-					{
-						if (GetModuleProductName(conflictingModulePath) == "ReShade")
-						{
-							File.Delete(conflictingModulePath);
-						}
-					}
-					catch (SystemException)
-					{
-						// Ignore errors
-						continue;
-					}
-				}
-
-				UpdateStatusAndFinish(false, "The target application is known to have blocked or banned the usage of ReShade. Cannot continue installation.");
-				return;
-			}
 
 			if (peInfo.StackSize != 0 && peInfo.StackSize < 1000000 && !executableName.Equals("gamelaunchhelper.exe", StringComparison.OrdinalIgnoreCase))
 			{

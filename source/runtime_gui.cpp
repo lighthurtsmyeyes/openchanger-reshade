@@ -1469,7 +1469,7 @@ void reshade::runtime::draw_gui()
 		{
 			const float header_height = ImGui::GetFontSize() * 1.6f + _imgui_context->Style.WindowPadding.y * 2.0f;
 			const float logo_size = ImGui::GetFontSize() * 1.6f;
-			const float sidebar_width = ImGui::GetFontSize() * 9.0f + _imgui_context->Style.FramePadding.x * 2.0f;
+			const float sidebar_width = ImGui::GetFontSize() * 9.0f + _imgui_context->Style.FramePadding.x * 2.0f + 16.0f;
 
 			// Dragging the header moves the overlay window
 			ImGui::SetCursorPos(ImVec2(0.0f, 0.0f));
@@ -1477,15 +1477,18 @@ void reshade::runtime::draw_gui()
 			if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0.0f))
 				ImGui::SetWindowPos(ImGui::GetWindowPos() + ImGui::GetIO().MouseDelta);
 
-			// Rounded logo and product name
+			// Rounded logo and product name (explicit coordinates, since the header overlays
+			// the zero-padding window content area)
+			const ImVec2 window_pos = ImGui::GetWindowPos();
+			constexpr float header_pad = 12.0f;
 			if (init_logo_texture())
 			{
-				const ImVec2 logo_pos = ImGui::GetCursorScreenPos() + ImVec2(_imgui_context->Style.WindowPadding.x, _imgui_context->Style.WindowPadding.y);
+				const ImVec2 logo_pos = ImVec2(window_pos.x + header_pad, window_pos.y + (header_height - logo_size) * 0.5f);
 				ImGui::GetWindowDrawList()->AddImageRounded(_logo_srv.handle, logo_pos, ImVec2(logo_pos.x + logo_size, logo_pos.y + logo_size),
 					ImVec2(0, 0), ImVec2(1, 1), IM_COL32_WHITE, logo_size * 0.25f);
 			}
 
-			ImGui::SetCursorPos(ImVec2(_imgui_context->Style.WindowPadding.x + logo_size + _imgui_context->Style.ItemSpacing.x,
+			ImGui::SetCursorPos(ImVec2(header_pad + logo_size + _imgui_context->Style.ItemSpacing.x,
 				(header_height - ImGui::GetFontSize()) * 0.5f));
 			if (_font_semibold != nullptr)
 				ImGui::PushFont(_font_semibold, 0.0f);
@@ -1493,16 +1496,23 @@ void reshade::runtime::draw_gui()
 			if (_font_semibold != nullptr)
 				ImGui::PopFont();
 
-			ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x - ImGui::CalcTextSize(VERSION_STRING_PRODUCT).x - _imgui_context->Style.WindowPadding.x,
+			ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x - ImGui::CalcTextSize(VERSION_STRING_PRODUCT).x - header_pad,
 				(header_height - ImGui::GetFontSize()) * 0.5f));
 			ImGui::TextDisabled("%s", VERSION_STRING_PRODUCT);
+
+			// Separator line below the header
+			ImGui::GetWindowDrawList()->AddLine(
+				ImVec2(window_pos.x, window_pos.y + header_height),
+				ImVec2(window_pos.x + ImGui::GetWindowSize().x, window_pos.y + header_height),
+				ImGui::GetColorU32(ImGuiCol_Border));
 
 			// Left sidebar with the section list
 			ImGui::SetCursorPos(ImVec2(0.0f, header_height));
 			ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.05f, 0.05f, 0.05f, 1.00f));
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.0f, 8.0f));
 			if (ImGui::BeginChild("##sidebar", ImVec2(sidebar_width, 0), ImGuiChildFlags_None, ImGuiWindowFlags_NoScrollbar))
 			{
-				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(12.0f, 8.0f));
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10.0f, 8.0f));
 				ImGui::Spacing();
 
 				for (int i = 0; i < section_count; ++i)
@@ -1520,6 +1530,7 @@ void reshade::runtime::draw_gui()
 				ImGui::PopStyleVar();
 			}
 			ImGui::EndChild();
+			ImGui::PopStyleVar(); // sidebar WindowPadding
 			ImGui::PopStyleColor();
 
 			// Separator line between sidebar and content
